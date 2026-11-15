@@ -1,0 +1,44 @@
+# =====================================================================
+# BarberControl | Integración continua (GitHub Actions)
+# Se ejecuta en cada push a main y en cada pull request hacia main.
+# Si un paso falla, el PR queda marcado en rojo y no debe integrarse.
+# =====================================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  calidad:
+    name: Validación de esquema, tipos y pruebas unitarias
+    runs-on: ubuntu-latest
+    env:
+      # Prisma exige la variable aunque estas validaciones no se conectan a la BD.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+      ZONA_HORARIA: America/Chihuahua
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependencias
+        run: npm install --no-audit --no-fund
+
+      - name: Validar el esquema Prisma
+        run: npx prisma validate
+
+      - name: Generar el cliente Prisma
+        run: npx prisma generate
+
+      - name: Revisión estática de tipos (TypeScript strict)
+        run: npm run typecheck
+
+      - name: Pruebas unitarias (node:test)
+        run: npm test
