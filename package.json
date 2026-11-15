@@ -12,7 +12,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "tsx --test src/tests/validadores.test.ts src/tests/disponibilidad.test.ts src/tests/fechas.test.ts",
+    "test": "tsx --test src/tests/validadores.test.ts src/tests/disponibilidad.test.ts src/tests/fechas.test.ts src/tests/permisos-cita.test.ts src/tests/actualizacion-consulta.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
