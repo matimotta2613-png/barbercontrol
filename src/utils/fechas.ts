@@ -29,6 +29,12 @@ export function leerHoraLocal(texto: string): Date | null {
   return esValida ? fecha : null;
 }
 
+/** "2026-11-20" -> Date a las 00:00 de ese día, o null si no es una fecha real ("2026-02-30"). */
+export function leerFechaLocal(texto: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return null;
+  return leerHoraLocal(`${texto} 00:00`);
+}
+
 /** Hora actual en la barbería, expresada con la misma convención (reloj local guardado como UTC). */
 export function ahoraLocal(ahora: Date = new Date()): Date {
   const partes = new Intl.DateTimeFormat('en-CA', {
