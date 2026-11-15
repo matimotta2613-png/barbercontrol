@@ -1,7 +1,7 @@
 {
   "name": "barbercontrol-app",
-  "version": "1.1.0",
-  "description": "BarberControl v1.1 - Sistema web de citas para BarberControl Studio (Actividad 11.1: Sprint 1, registro de cliente y alta de cita)",
+  "version": "1.2.0",
+  "description": "BarberControl v1.2 - Sistema web de citas para BarberControl Studio (Actividad 12.1: Sprint 2, actualización y consulta de citas)",
   "private": true,
   "main": "dist/server.js",
   "scripts": {
