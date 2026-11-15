@@ -32,6 +32,13 @@ export class NoEncontradoError extends ErrorDeAplicacion {
   }
 }
 
+/** 403: quien hace la petición no tiene permiso para esa acción. */
+export class ProhibidoError extends ErrorDeAplicacion {
+  constructor(mensaje: string) {
+    super(mensaje, 403, 'SIN_PERMISO');
+  }
+}
+
 /** 409: la acción choca con algo que ya existe (correo repetido, horario ocupado). */
 export class ConflictoError extends ErrorDeAplicacion {
   constructor(mensaje: string, codigo: string) {

@@ -40,19 +40,26 @@ export class LectorDeCampos {
     return texto;
   }
 
-  enteroPositivo(campo: string): number | undefined {
+  enteroPositivo(campo: string, { opcional = false }: { opcional?: boolean } = {}): number | undefined {
     const valor = this.cuerpo[campo];
-    if (valor === undefined || valor === null) return this.rechazar(`${campo} es obligatorio`);
+    if (valor === undefined || valor === null) {
+      return opcional ? undefined : this.rechazar(`${campo} es obligatorio`);
+    }
     if (!Number.isInteger(valor) || (valor as number) <= 0) {
       return this.rechazar(`${campo} debe ser un número entero positivo`);
     }
     return valor as number;
   }
 
-  fechaHoraLocal(campo: string): Date | undefined {
-    const texto = this.texto(campo, { max: 16 });
+  fechaHoraLocal(campo: string, { opcional = false }: { opcional?: boolean } = {}): Date | undefined {
+    const texto = this.texto(campo, { max: 16, opcional });
     if (texto === undefined) return undefined;
     return leerHoraLocal(texto) ?? this.rechazar(`${campo} debe tener el formato AAAA-MM-DD HH:mm`);
+  }
+
+  /** ¿El cuerpo trae el campo? (para saber qué quiere cambiar el usuario en una actualización) */
+  trae(campo: string): boolean {
+    return this.cuerpo[campo] !== undefined;
   }
 
   /** Para reglas de formato propias de cada validador (correo, teléfono...). */

@@ -5,9 +5,9 @@
  * Encapsula el acceso a la tabla "usuario" mediante el modelo Prisma Usuario.
  */
 import { prisma } from '../config/database';
+import { ROL } from '../constants/catalogos';
 
-/** Ids fijos del catálogo "rol" (script 7.1). */
-export const ROL = { ADMINISTRADOR: 1, BARBERO: 2, CLIENTE: 3 } as const;
+export { ROL }; // se conserva la exportación del Sprint 1
 
 export interface NuevoCliente {
   nombre: string;
@@ -41,4 +41,12 @@ export function buscarPorCorreo(correo: string) {
 /** SELECT ... FROM usuario WHERE id_usuario = $1 AND id_rol = 3 AND activo */
 export function buscarClienteActivo(idUsuario: number) {
   return prisma.usuario.findFirst({ where: { idUsuario, idRol: ROL.CLIENTE, activo: true } });
+}
+
+/** Usuario activo de cualquier rol: quién realiza una acción (mientras no exista login, HU-05). */
+export function buscarUsuarioActivo(idUsuario: number) {
+  return prisma.usuario.findFirst({
+    where: { idUsuario, activo: true },
+    select: { idUsuario: true, idRol: true },
+  });
 }
