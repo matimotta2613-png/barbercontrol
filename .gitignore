@@ -1,0 +1,13 @@
+# Dependencias y compilados
+node_modules/
+dist/
+
+# Variables de entorno (contienen contraseñas): solo se sube .env.example
+.env
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

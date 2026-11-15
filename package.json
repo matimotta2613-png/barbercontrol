@@ -1,0 +1,30 @@
+{
+  "name": "barbercontrol-app",
+  "version": "1.1.0",
+  "description": "BarberControl v1.1 - Sistema web de citas para BarberControl Studio (Actividad 11.1: Sprint 1, registro de cliente y alta de cita)",
+  "private": true,
+  "main": "dist/server.js",
+  "scripts": {
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prueba:conexion": "tsx src/scripts/prueba-conexion.ts",
+    "prueba:limpiar": "tsx src/scripts/prueba-conexion.ts --limpiar",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "tsx --test src/tests/validadores.test.ts src/tests/disponibilidad.test.ts src/tests/fechas.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.0",
+    "express": "^4.21.1",
+    "bcryptjs": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.17.0",
+    "prisma": "^6.16.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
