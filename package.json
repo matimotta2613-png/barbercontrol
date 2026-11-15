@@ -13,7 +13,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "tsx --test src/tests/validadores.test.ts src/tests/disponibilidad.test.ts src/tests/fechas.test.ts src/tests/permisos-cita.test.ts src/tests/actualizacion-consulta.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:bd": "psql -v ON_ERROR_STOP=1 -f db/pruebas_bd.sql"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",
