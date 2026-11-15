@@ -1,0 +1,237 @@
+// =====================================================================
+// BarberControl v1.0 | Actividad 10.1 | Mapeo ORM (Prisma) de la BD 7.1
+// Equipo: Martínez Mota Diana Angélica (22540267) / Eduardo Guevara Ruiz (23540259)
+//
+// Enfoque "database-first": las tablas las crea el script de la Actividad 7.1
+// (barbercontrol.sql). Prisma NO crea ni migra tablas aquí; solo mapea cada
+// tabla a un modelo TypeScript. Por eso:
+//   * Los nombres en código van en camelCase y @map / @@map los enlazan con
+//     las columnas y tablas reales en snake_case.
+//   * Prisma no crea ni modifica la estructura de la BD (sin migraciones).
+//   * Reglas que Prisma no puede expresar (restricción EXCLUDE anti-solapamiento
+//     RF-03, columna calculada fecha_hora_fin, trigger de bitácora) viven en la
+//     propia base de datos y se respetan automáticamente.
+// =====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // definida en el archivo .env
+}
+
+// ---------------------------------------------------------------------
+// 1. CATÁLOGOS FIJOS
+// ---------------------------------------------------------------------
+
+/// Roles del sistema: 1 Administrador, 2 Barbero, 3 Cliente.
+model Rol {
+  idRol       Int       @id @map("id_rol") @db.SmallInt
+  nombre      String    @unique @db.VarChar(20)
+  descripcion String?   @db.VarChar(100)
+  usuarios    Usuario[]
+
+  @@map("rol")
+}
+
+/// Estados de cita: 1 Pendiente, 2 En Atención, 3 Finalizada, 4 Cancelada.
+model EstadoCita {
+  idEstado          Int                   @id @map("id_estado") @db.SmallInt
+  nombre            String                @unique @db.VarChar(20)
+  descripcion       String?               @db.VarChar(100)
+  citas             Cita[]
+  historialAnterior HistorialEstadoCita[] @relation("EstadoAnterior")
+  historialNuevo    HistorialEstadoCita[] @relation("EstadoNuevo")
+
+  @@map("estado_cita")
+}
+
+/// Métodos de pago: 1 Efectivo, 2 Transferencia.
+model MetodoPago {
+  idMetodo Int    @id @map("id_metodo") @db.SmallInt
+  nombre   String @unique @db.VarChar(30)
+  pagos    Pago[]
+
+  @@map("metodo_pago")
+}
+
+// ---------------------------------------------------------------------
+// 2. USUARIOS Y BARBEROS
+// ---------------------------------------------------------------------
+
+/// Cualquier persona que entra al sistema (admin, barbero o cliente).
+model Usuario {
+  idUsuario             Int      @id @default(autoincrement()) @map("id_usuario")
+  idRol                 Int      @map("id_rol") @db.SmallInt
+  nombre                String   @db.VarChar(60)
+  apellidos             String   @db.VarChar(80)
+  correo                String   @unique @db.VarChar(120)
+  telefono              String?  @db.VarChar(15)
+  passwordHash          String   @map("password_hash") @db.VarChar(255)
+  aceptoAvisoPrivacidad Boolean  @default(false) @map("acepto_aviso_privacidad")
+  fechaRegistro         DateTime @default(now()) @map("fecha_registro") @db.Timestamp(6)
+  activo                Boolean  @default(true)
+
+  rol              Rol                   @relation(fields: [idRol], references: [idRol])
+  barbero          Barbero?
+  citasComoCliente Cita[]
+  pagosCobrados    Pago[]
+  cambiosDeEstado  HistorialEstadoCita[]
+
+  @@map("usuario")
+}
+
+/// Datos laborales del usuario con rol Barbero (relación 1:1 con usuario).
+model Barbero {
+  idBarbero    Int      @id @default(autoincrement()) @map("id_barbero")
+  idUsuario    Int      @unique @map("id_usuario")
+  especialidad String?  @db.VarChar(80)
+  fechaIngreso DateTime @map("fecha_ingreso") @db.Date
+  activo       Boolean  @default(true)
+
+  usuario   Usuario           @relation(fields: [idUsuario], references: [idUsuario])
+  servicios BarberoServicio[]
+  horarios  HorarioBarbero[]
+  bloqueos  BloqueoAgenda[]
+  citas     Cita[]
+
+  @@map("barbero")
+}
+
+// ---------------------------------------------------------------------
+// 3. CATÁLOGO DE SERVICIOS
+// ---------------------------------------------------------------------
+
+model Servicio {
+  idServicio  Int     @id @default(autoincrement()) @map("id_servicio")
+  nombre      String  @unique @db.VarChar(80)
+  descripcion String? @db.VarChar(255)
+  duracionMin Int     @map("duracion_min") @db.SmallInt // múltiplo de 15 (CHECK en BD)
+  precio      Decimal @db.Decimal(8, 2)
+  activo      Boolean @default(true)
+
+  barberos BarberoServicio[]
+  citas    Cita[]
+
+  @@map("servicio")
+}
+
+/// Tabla puente N:M: qué servicios ofrece cada barbero.
+model BarberoServicio {
+  idBarbero  Int @map("id_barbero")
+  idServicio Int @map("id_servicio")
+
+  barbero  Barbero  @relation(fields: [idBarbero], references: [idBarbero])
+  servicio Servicio @relation(fields: [idServicio], references: [idServicio])
+
+  @@id([idBarbero, idServicio])
+  @@map("barbero_servicio")
+}
+
+// ---------------------------------------------------------------------
+// 4. DISPONIBILIDAD DEL BARBERO
+// ---------------------------------------------------------------------
+
+model HorarioBarbero {
+  idHorario  Int      @id @default(autoincrement()) @map("id_horario")
+  idBarbero  Int      @map("id_barbero")
+  diaSemana  Int      @map("dia_semana") @db.SmallInt // 1 = lunes ... 7 = domingo
+  horaInicio DateTime @map("hora_inicio") @db.Time(6)
+  horaFin    DateTime @map("hora_fin") @db.Time(6)
+
+  barbero Barbero @relation(fields: [idBarbero], references: [idBarbero])
+
+  @@unique([idBarbero, diaSemana, horaInicio])
+  @@map("horario_barbero")
+}
+
+model BloqueoAgenda {
+  idBloqueo       Int      @id @default(autoincrement()) @map("id_bloqueo")
+  idBarbero       Int      @map("id_barbero")
+  fechaHoraInicio DateTime @map("fecha_hora_inicio") @db.Timestamp(6)
+  fechaHoraFin    DateTime @map("fecha_hora_fin") @db.Timestamp(6)
+  motivo          String   @db.VarChar(100)
+
+  barbero Barbero @relation(fields: [idBarbero], references: [idBarbero])
+
+  @@index([idBarbero, fechaHoraInicio], map: "idx_bloqueo_barbero")
+  @@map("bloqueo_agenda")
+}
+
+// ---------------------------------------------------------------------
+// 5. CITAS (ENTIDAD CENTRAL)
+// ---------------------------------------------------------------------
+
+/// Cita agendada. Reglas que aplica la propia BD:
+///  - folio: lo genera la secuencia seq_folio_cita (BC-AAAA-000001).
+///  - fechaHoraFin: columna calculada (inicio + duración). Solo lectura.
+///  - ex_cita_sin_solapamiento: impide citas traslapadas del mismo barbero (RF-03).
+///  - trg_cita_historial: registra cada cambio de estado en historial_estado_cita.
+model Cita {
+  idCita              Int      @id @default(autoincrement()) @map("id_cita")
+  folio               String   @unique @default(dbgenerated("(('BC-' || to_char(CURRENT_DATE, 'YYYY')) || '-') || lpad((nextval('seq_folio_cita'))::text, 6, '0')")) @db.VarChar(20)
+  idCliente           Int      @map("id_cliente")
+  idBarbero           Int      @map("id_barbero")
+  idServicio          Int      @map("id_servicio")
+  idEstado            Int      @default(1) @map("id_estado") @db.SmallInt
+  fechaHoraInicio     DateTime @map("fecha_hora_inicio") @db.Timestamp(6)
+  duracionMinAplicada Int      @map("duracion_min_aplicada") @db.SmallInt
+  // Columna GENERATED ALWAYS ... STORED (inicio + duración): la calcula la BD.
+  // Es opcional (?) para que Prisma nunca la envíe en create/update; solo se lee.
+  fechaHoraFin        DateTime? @map("fecha_hora_fin") @db.Timestamp(6)
+  precioAplicado      Decimal  @map("precio_aplicado") @db.Decimal(8, 2)
+  observaciones       String?  @db.VarChar(255)
+  fechaCreacion       DateTime @default(now()) @map("fecha_creacion") @db.Timestamp(6)
+
+  cliente   Usuario               @relation(fields: [idCliente], references: [idUsuario])
+  barbero   Barbero               @relation(fields: [idBarbero], references: [idBarbero])
+  servicio  Servicio              @relation(fields: [idServicio], references: [idServicio])
+  estado    EstadoCita            @relation(fields: [idEstado], references: [idEstado])
+  pago      Pago?
+  historial HistorialEstadoCita[]
+
+  @@index([idBarbero, fechaHoraInicio], map: "idx_cita_barbero_inicio")
+  @@index([idCliente], map: "idx_cita_cliente")
+  @@index([idEstado], map: "idx_cita_estado")
+  @@map("cita")
+}
+
+// ---------------------------------------------------------------------
+// 6. COBROS Y BITÁCORA
+// ---------------------------------------------------------------------
+
+model Pago {
+  idPago         Int      @id @default(autoincrement()) @map("id_pago")
+  idCita         Int      @unique @map("id_cita")
+  idMetodo       Int      @map("id_metodo") @db.SmallInt
+  idUsuarioCobra Int      @map("id_usuario_cobra")
+  monto          Decimal  @db.Decimal(8, 2)
+  fechaPago      DateTime @default(now()) @map("fecha_pago") @db.Timestamp(6)
+
+  cita          Cita       @relation(fields: [idCita], references: [idCita])
+  metodo        MetodoPago @relation(fields: [idMetodo], references: [idMetodo])
+  usuarioCobra  Usuario    @relation(fields: [idUsuarioCobra], references: [idUsuario])
+
+  @@map("pago")
+}
+
+/// Bitácora de cambios de estado. La llena el trigger trg_cita_historial;
+/// la aplicación solo la consulta.
+model HistorialEstadoCita {
+  idHistorial      Int      @id @default(autoincrement()) @map("id_historial")
+  idCita           Int      @map("id_cita")
+  idEstadoAnterior Int?     @map("id_estado_anterior") @db.SmallInt
+  idEstadoNuevo    Int      @map("id_estado_nuevo") @db.SmallInt
+  idUsuario        Int?     @map("id_usuario")
+  fechaCambio      DateTime @default(now()) @map("fecha_cambio") @db.Timestamp(6)
+
+  cita           Cita        @relation(fields: [idCita], references: [idCita])
+  estadoAnterior EstadoCita? @relation("EstadoAnterior", fields: [idEstadoAnterior], references: [idEstado])
+  estadoNuevo    EstadoCita  @relation("EstadoNuevo", fields: [idEstadoNuevo], references: [idEstado])
+  usuario        Usuario?    @relation(fields: [idUsuario], references: [idUsuario])
+
+  @@index([idCita], map: "idx_historial_cita")
+  @@map("historial_estado_cita")
+}
